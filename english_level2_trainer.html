@@ -1,0 +1,285 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.wrap { padding: 1rem 0; max-width: 680px; font-family: var(--font-sans); }
+.prog-bg { background: var(--color-background-secondary); border-radius: 8px; height: 8px; margin-bottom: 1rem; }
+.prog-fg { background: #1D9E75; height: 8px; border-radius: 8px; transition: width 0.4s; }
+.stats { display: flex; gap: 10px; margin-bottom: 1rem; }
+.stat { flex: 1; background: var(--color-background-secondary); border-radius: 8px; padding: 8px 12px; text-align: center; }
+.stat .num { font-size: 20px; font-weight: 500; }
+.stat .lbl { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
+.green { color: #1D9E75; } .red { color: #E24B4A; }
+.mode-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+.mode-btn { flex: 1; min-width: 90px; padding: 6px 8px; border-radius: 8px; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); font-size: 12px; cursor: pointer; color: var(--color-text-secondary); }
+.mode-btn.active { border-color: #1D9E75; color: #1D9E75; background: #EAF3DE; }
+.card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1rem; }
+.q-num { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 6px; }
+.q-task { font-size: 12px; color: #1D9E75; margin-bottom: 8px; font-weight: 500; }
+.q-text { font-size: 15px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 1rem; line-height: 1.6; }
+.blank { display: inline-block; border-bottom: 2px solid #1D9E75; min-width: 80px; text-align: center; padding: 0 4px; }
+.opts { display: flex; flex-direction: column; gap: 7px; margin-bottom: 10px; }
+.opt { background: var(--color-background-primary); border: 0.5px solid var(--color-border-secondary); border-radius: 8px; padding: 9px 13px; font-size: 13px; color: var(--color-text-primary); cursor: pointer; text-align: left; transition: background 0.12s; }
+.opt:hover:not(:disabled) { background: var(--color-background-secondary); }
+.opt.ok { background: #EAF3DE; border-color: #639922; color: #27500A; }
+.opt.bad { background: #FCEBEB; border-color: #A32D2D; color: #501313; }
+.input-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+.ans-input { flex: 1; padding: 9px 13px; border-radius: 8px; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-primary); font-size: 14px; }
+.ans-input:focus { outline: none; border-color: #1D9E75; }
+.ans-input.ok { border-color: #639922; background: #EAF3DE; color: #27500A; }
+.ans-input.bad { border-color: #A32D2D; background: #FCEBEB; color: #501313; }
+.check-btn { padding: 9px 18px; border-radius: 8px; border: none; background: #1D9E75; color: white; font-size: 14px; cursor: pointer; font-weight: 500; white-space: nowrap; }
+.check-btn:hover { background: #0F6E56; }
+.check-btn:disabled { opacity: 0.4; cursor: default; }
+.exp { margin-top: 10px; padding: 9px 13px; background: var(--color-background-secondary); border-radius: 8px; font-size: 13px; color: var(--color-text-secondary); border-left: 3px solid #1D9E75; line-height: 1.5; display: none; }
+.exp.wrong { border-left-color: #E24B4A; }
+.nav { display: none; gap: 10px; margin-top: 10px; }
+.btn { flex: 1; padding: 9px; border-radius: 8px; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); font-size: 13px; cursor: pointer; color: var(--color-text-primary); }
+.btn:hover { background: var(--color-background-secondary); }
+.btn.primary { background: #1D9E75; color: white; border-color: #0F6E56; font-weight: 500; }
+.btn.primary:hover { background: #0F6E56; }
+.finish { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: 12px; padding: 2rem; text-align: center; }
+.finish-score { font-size: 44px; font-weight: 500; color: #1D9E75; margin: 0.75rem 0 0.5rem; }
+.finish-msg { font-size: 14px; color: var(--color-text-secondary); margin-bottom: 1.25rem; }
+</style>
+
+<div class="wrap">
+  <div class="prog-bg"><div class="prog-fg" id="prog"></div></div>
+  <div class="stats">
+    <div class="stat"><div class="num green" id="s-ok">0</div><div class="lbl">Правильно</div></div>
+    <div class="stat"><div class="num" id="s-cur">—</div><div class="lbl">Питання</div></div>
+    <div class="stat"><div class="num" id="s-left">—</div><div class="lbl">Залишилось</div></div>
+    <div class="stat"><div class="num red" id="s-bad">0</div><div class="lbl">Помилок</div></div>
+  </div>
+  <div class="mode-row">
+    <button class="mode-btn active" id="m-order" onclick="setMode('order')">По порядку</button>
+    <button class="mode-btn" id="m-shuffle" onclick="setMode('shuffle')">Перемішати</button>
+    <button class="mode-btn" id="m-wrong" onclick="setMode('wrong')">Тільки помилки</button>
+  </div>
+  <div id="q-area"></div>
+</div>
+
+<script>
+// type: 'input' = вводити відповідь, 'choice' = обрати з варіантів
+const QS = [
+  // --- PRESENT CONTINUOUS ---
+  {q:"Please be quiet! I am ___ to concentrate.", hint:"(try)", a:["trying"], u:"Зараз намагаюся → Present Continuous (am trying)."},
+  {q:"Look! It is ___ outside.", hint:"(snow)", a:["snowing"], u:"Зараз іде сніг → Present Continuous (is snowing)."},
+  {q:"Why are you ___ at me like that?", hint:"(look)", a:["looking"], u:"Зараз дивишся → Present Continuous (are looking)."},
+  {q:"The kettle is ___! Can you turn it off?", hint:"(boil)", a:["boiling"], u:"Зараз кипить → Present Continuous (is boiling)."},
+  {q:"I am ___ a letter at the moment.", hint:"(write)", a:["writing"], u:"Зараз пишу → Present Continuous (am writing)."},
+  {q:"Why are you ___ at me like that?", hint:"(cry)", a:["crying"], u:"Зараз плачеш → Present Continuous (are crying)."},
+  {q:"The water is ___! Can you turn it off?", hint:"(boil)", a:["boiling"], u:"Зараз кипить → Present Continuous (is boiling)."},
+  {q:"Please be quiet! I am ___ the poem by heart.", hint:"(learn)", a:["learning"], u:"Зараз вчу → Present Continuous (am learning)."},
+  {q:"Look! We are being ___.", hint:"(watch)", a:["watched"], u:"Зараз за нами спостерігають → Passive Continuous (being watched)."},
+  {q:"Why are you ___ at me like that?", hint:"(look)", a:["looking"], u:"Present Continuous (are looking)."},
+  {q:"The streets are being ___ at the moment.", hint:"(sweep)", a:["swept"], u:"Passive Continuous: are being swept (3-тя форма від sweep)."},
+  {q:"A new security system is being ___ at the moment.", hint:"(install)", a:["installed"], u:"Passive Continuous: is being installed."},
+  {q:"Look! The neighbors are ___ out.", hint:"(go)", a:["going"], u:"Present Continuous (are going)."},
+  {q:"Stop talking! I am ___ to work.", hint:"(try)", a:["trying"], u:"Present Continuous (am trying)."},
+  {q:"Look! The sun is ___.", hint:"(shine)", a:["shining"], u:"Present Continuous (is shining)."},
+  {q:"Do not make so much noise! I am ___ to work.", hint:"(try)", a:["trying"], u:"Present Continuous (am trying)."},
+
+  // --- PRESENT SIMPLE ---
+  {q:"How many cigarettes do you ___ a day?", hint:"(smoke)", a:["smoke"], u:"Звичка → Present Simple (smoke)."},
+  {q:"What does the word 'deceive' ___?", hint:"(mean)", a:["mean"], u:"Present Simple питання: does + bare infinitive (mean)."},
+  {q:"The swimming bath ___ at 9 and closes at 5.", hint:"(open)", a:["opens"], u:"Розклад → Present Simple (opens)."},
+  {q:"What does ___ father do?", hint:"(your)", a:["your"], u:"What does your father do? = Ким працює твій батько?"},
+  {q:"What does he ___?", hint:"(do)", a:["do"], u:"Present Simple питання: does + bare infinitive (do)."},
+  {q:"If the temperature is 100°C, the water ___.", hint:"(boil)", a:["boils"], u:"Zero Conditional = факт → Present Simple (boils)."},
+  {q:"The museum ___ at 9 and closes at 5.", hint:"(open)", a:["opens"], u:"Розклад → Present Simple (opens)."},
+  {q:"Does this word ___ this?", hint:"(mean)", a:["mean"], u:"Present Simple питання: does + bare infinitive (mean)."},
+  {q:"Athletics ___ an Olympic sport.", hint:"(be)", a:["is"], u:"Athletics — незлічуване (спорт) → is."},
+  {q:"Money ___ the root of all evil.", hint:"(be)", a:["is"], u:"Money = незлічуване → is."},
+
+  // --- PAST SIMPLE ---
+  {q:"Yesterday Tom ___ up at 8.", hint:"(wake)", a:["woke"], u:"Past Simple від wake → woke (неправильне)."},
+  {q:"Yesterday Tom ___ a sandwich for lunch.", hint:"(have)", a:["had"], u:"Past Simple від have → had."},
+  {q:"Tom's father ___ him to drive when he was 16.", hint:"(teach)", a:["taught"], u:"Past Simple від teach → taught (неправильне)."},
+  {q:"Ann ___ a lot of money yesterday.", hint:"(spend)", a:["spent"], u:"Past Simple від spend → spent (неправильне)."},
+  {q:"Yesterday we did not ___ enough time to visit all the museums.", hint:"(have)", a:["have"], u:"After did not → bare infinitive (have)."},
+  {q:"George ___ a lot of money yesterday.", hint:"(spend)", a:["spent"], u:"Past Simple від spend → spent."},
+  {q:"Yesterday we ___ enough time to visit all the museums.", hint:"(have)", a:["had"], u:"Past Simple від have → had."},
+  {q:"Yesterday George ___ to buy a new car.", hint:"(decide)", a:["decided"], u:"Past Simple (decided). Правильне дієслово."},
+  {q:"Jeremy ___ a lot of money yesterday.", hint:"(earn)", a:["earned"], u:"Past Simple (earned). Правильне дієслово."},
+  {q:"Yesterday we did not ___ enough time to visit our relatives.", hint:"(have)", a:["have"], u:"After did not → bare infinitive (have)."},
+  {q:"Tom's father ___ him to drive when he was 16.", hint:"(teach)", a:["taught"], u:"Past Simple від teach → taught."},
+
+  // --- PAST CONTINUOUS ---
+  {q:"At 9 o'clock yesterday Ann was ___ breakfast.", hint:"(have)", a:["having"], u:"Тривала дія в минулому → Past Continuous (was having)."},
+  {q:"I fell asleep when I was ___ TV.", hint:"(watch)", a:["watching"], u:"Past Continuous (was watching) — фонова дія."},
+  {q:"Last night I was reading in bed when suddenly I ___ a scream.", hint:"(hear)", a:["heard"], u:"Раптова дія перервала тривалу → Past Simple (heard)."},
+  {q:"George fell off the ladder when he was ___ the ceiling.", hint:"(paint)", a:["painting"], u:"Past Continuous (was painting) — фонова дія."},
+  {q:"The day before yesterday I fell asleep when I was ___ TV.", hint:"(watch)", a:["watching"], u:"Past Continuous (was watching)."},
+  {q:"Last night I was reading in bed when suddenly I ___ my neighbour.", hint:"(see)", a:["saw"], u:"Раптова дія → Past Simple (saw)."},
+  {q:"At 9 o'clock yesterday Ann was ___ breakfast.", hint:"(drink — помилка в тексті, правильно: have)", a:["having","drinking"], u:"Past Continuous. В оригіналі помилка: 'drinking breakfast' — правильно 'having breakfast'."},
+  {q:"I fell in ___ when I was watching TV.", hint:"(fall in love)", a:["love"], u:"Fell in love = закохався."},
+
+  // --- PRESENT PERFECT ---
+  {q:"See what you have ___!", hint:"(do)", a:["done"], u:"Present Perfect: have + 3-тя форма (done)."},
+  {q:"He ___ been studying English for three years.", hint:"(be)", a:["has"], u:"Present Perfect Continuous: has been studying."},
+  {q:"Have you ever ___ to London?", hint:"(be)", a:["been"], u:"Present Perfect: have been (been = 3-тя форма)."},
+  {q:"Tom ___ never been abroad.", hint:"(be)", a:["has"], u:"Tom = he → has (has never been)."},
+  {q:"We ___ not had enough time to visit all the museums.", hint:"(have)", a:["have"], u:"Present Perfect: have not had."},
+
+  // --- PASSIVE VOICE ---
+  {q:"This document should have been ___ yesterday!", hint:"(write)", a:["written"], u:"Should have been + 3-тя форма (written)."},
+  {q:"This novel was ___ into several languages after it gained popularity.", hint:"(translate)", a:["translated"], u:"Passive Past Simple: was + 3-тя форма (translated)."},
+  {q:"English is ___ all over the world.", hint:"(speak)", a:["spoken"], u:"Passive Present Simple: is + 3-тя форма (spoken)."},
+  {q:"The problem was ___ much faster than expected.", hint:"(solve)", a:["solved"], u:"Passive Past Simple: was solved."},
+
+  // --- CONDITIONALS ---
+  {q:"If I ___ enough time, I would go to the party.", hint:"(have)", a:["had"], u:"2-й Conditional (нереальне): If I had... would go."},
+  {q:"If I ___ been the President, it wouldn't have happened.", hint:"(be)", a:["had"], u:"3-й Conditional: If I had been... (had + past participle)."},
+  {q:"You should have ___ me.", hint:"(follow)", a:["followed"], u:"Should have + 3-тя форма (followed)."},
+  {q:"If I were you, I ___ consult a doctor.", hint:"(consult)", a:["would"], u:"2-й Conditional: If I were you, I would..."},
+  {q:"He wouldn't have become famous if he ___ no money.", hint:"(have)", a:["had had"], u:"3-й Conditional: if + had had (past perfect)."},
+  {q:"If I ___ a camera, I would have taken some pictures.", hint:"(have)", a:["had had"], u:"3-й Conditional: if I had had... would have taken."},
+  {q:"If it ___ tomorrow, we will stay at home.", hint:"(rain)", a:["rains"], u:"1-й Conditional (реальне): If + Present Simple → will."},
+  {q:"Mr. Jackson would have been disappointed if he ___ the lottery.", hint:"(lose)", a:["had lost"], u:"3-й Conditional: if + had lost."},
+  {q:"If I were you, I ___ take this opportunity.", hint:"(take)", a:["would"], u:"2-й Conditional: If I were you, I would take..."},
+
+  // --- COMPARATIVES ---
+  {q:"Tom is ___ at English than Gregory.", hint:"(good)", a:["better"], u:"Порівняльний від good → better (неправильна форма!)."},
+  {q:"English is ___ than German.", hint:"(easy)", a:["easier"], u:"easy → easier (y → ier)."},
+  {q:"Tom is ___ than Gregory.", hint:"(lucky)", a:["luckier"], u:"lucky → luckier (y → ier)."},
+  {q:"Chinese is ___ than Japanese.", hint:"(easy)", a:["easier"], u:"easy → easier."},
+  {q:"German is ___ than English.", hint:"(hard)", a:["harder"], u:"hard → harder (+ er)."},
+  {q:"English is ___ than Japanese.", hint:"(easy)", a:["easier"], u:"easy → easier."},
+
+  // --- PREPOSITIONS ---
+  {q:"Tom is fluent ___ English.", hint:"(in/at/on)", a:["in"], u:"Fluent IN a language = вільно володіє мовою."},
+  {q:"England is famous ___ its rainy weather.", hint:"(for/of/in)", a:["for"], u:"Famous FOR = відомий чимось."},
+  {q:"I am proud ___ you.", hint:"(of/for/in)", a:["of"], u:"Proud OF = пишатися кимось."},
+  {q:"He is interested ___ getting married.", hint:"(in/of/at)", a:["in"], u:"Interested IN = цікавитися чимось."},
+  {q:"Luke is pleased ___ his exam results.", hint:"(with/of/at)", a:["with"], u:"Pleased WITH = задоволений чимось."},
+  {q:"I am very bad ___ music.", hint:"(at/in/of)", a:["at"], u:"Bad AT = погано вмію щось. Good AT / Bad AT."},
+  {q:"She is very excited ___ the party.", hint:"(about/of/for)", a:["about"], u:"Excited ABOUT = схвильований через щось."},
+  {q:"Tom is different ___ his brother.", hint:"(from/of/to)", a:["from"], u:"Different FROM = відрізняється від."},
+  {q:"Ann is afraid ___ dogs.", hint:"(of/from/at)", a:["of"], u:"Afraid OF = боятися чогось."},
+  {q:"What is your town famous ___?", hint:"(for/of/in)", a:["for"], u:"Famous FOR = відомий чимось."},
+  {q:"Your answers are not ___!", hint:"(satisfy)", a:["satisfying"], u:"Not satisfying = незадовільні (Present Participle як прикметник)."},
+
+  // --- PLURALS ---
+  {q:"The plural of 'mouse' is ___.", hint:"(mice/mouses)", a:["mice"], u:"Mouse → mice (неправильний множина)."},
+  {q:"The plural of 'retina' is ___.", hint:"(retinae/retinas)", a:["retinae"], u:"Retina (лат.) → retinae."},
+  {q:"The plural of 'aircraft' is ___.", hint:"(aircraft/aircrafts)", a:["aircraft"], u:"Aircraft → aircraft (не змінюється в множині)."},
+  {q:"The plural of 'fish' is ___.", hint:"(fish/fishes)", a:["fish"], u:"Fish → fish (не змінюється в множині)."},
+];
+
+let mode = 'order';
+let list = [...QS.keys()];
+let wrongIdx = [];
+let idx = 0, correct = 0, wrong = 0, answered = false;
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('m-' + m).classList.add('active');
+  restart();
+}
+
+function getList() {
+  if (mode === 'shuffle') {
+    const a = [...QS.keys()];
+    for (let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+    return a;
+  }
+  if (mode === 'wrong') return [...wrongIdx];
+  return [...QS.keys()];
+}
+
+function restart() {
+  if (mode === 'wrong' && wrongIdx.length === 0) {
+    document.getElementById('q-area').innerHTML = '<div class="card" style="text-align:center;color:var(--color-text-secondary);font-size:14px;padding:2rem;">Ще немає помилок! Спершу пройди тест.</div>';
+    return;
+  }
+  list = getList();
+  idx = 0; correct = 0; wrong = 0;
+  if (mode !== 'wrong') wrongIdx = [];
+  render();
+}
+
+function updateStats() {
+  document.getElementById('s-ok').textContent = correct;
+  document.getElementById('s-bad').textContent = wrong;
+  document.getElementById('s-cur').textContent = idx + 1;
+  document.getElementById('s-left').textContent = list.length - idx;
+  document.getElementById('prog').style.width = Math.round((idx / list.length) * 100) + '%';
+}
+
+function render() {
+  if (idx >= list.length) { renderFinish(); return; }
+  answered = false;
+  const q = QS[list[idx]];
+  const globalNum = list[idx] + 1;
+  updateStats();
+
+  // Highlight blank in question
+  const qDisplay = q.q.replace(/___/g, `<span class="blank">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>`);
+
+  document.getElementById('q-area').innerHTML = `
+    <div class="card">
+      <div class="q-num">Питання ${globalNum} з ${QS.length} &nbsp;·&nbsp; ${idx+1} з ${list.length} у режимі</div>
+      <div class="q-task">✏️ Впиши правильну форму слова ${q.hint}</div>
+      <div class="q-text">${qDisplay}</div>
+      <div class="input-row">
+        <input class="ans-input" id="ans" type="text" placeholder="Твоя відповідь..." autocomplete="off" onkeydown="if(event.key==='Enter')checkAns()">
+        <button class="check-btn" id="chk" onclick="checkAns()">Перевірити</button>
+      </div>
+      <div class="exp" id="exp"></div>
+    </div>
+    <div class="nav" id="nav">
+      <button class="btn primary" onclick="next()">Далі →</button>
+    </div>`;
+  document.getElementById('ans').focus();
+}
+
+function checkAns() {
+  if (answered) return;
+  const q = QS[list[idx]];
+  const inp = document.getElementById('ans');
+  const val = inp.value.trim().toLowerCase();
+  if (!val) return;
+  answered = true;
+  document.getElementById('chk').disabled = true;
+  inp.disabled = true;
+
+  const ok = q.a.some(a => val === a.toLowerCase());
+  if (ok) { correct++; inp.classList.add('ok'); }
+  else { wrong++; inp.classList.add('bad'); if(!wrongIdx.includes(list[idx])) wrongIdx.push(list[idx]); }
+  updateStats();
+
+  const exp = document.getElementById('exp');
+  exp.style.display = 'block';
+  exp.className = 'exp' + (ok ? '' : ' wrong');
+  exp.innerHTML = ok
+    ? '✓ Правильно! ' + q.u
+    : '✗ Неправильно. Правильна відповідь: <strong>' + q.a[0] + '</strong>. ' + q.u;
+
+  // Show full sentence
+  const full = q.q.replace(/___/g, `<strong style="color:#1D9E75">${q.a[0]}</strong>`);
+  exp.innerHTML += `<br><br>📝 Речення: ${full}`;
+
+  document.getElementById('nav').style.display = 'flex';
+}
+
+function next() { idx++; render(); }
+
+function renderFinish() {
+  const pct = Math.round((correct / list.length) * 100);
+  const msg = pct >= 80 ? '🎉 Відмінно! Ти готовий до іспиту!' : pct >= 60 ? '👍 Непогано! Пройди ще раз помилки.' : '📚 Треба ще попрактикуватись. Не здавайся!';
+  document.getElementById('prog').style.width = '100%';
+  document.getElementById('q-area').innerHTML = `
+    <div class="finish">
+      <div style="font-size:14px;color:var(--color-text-secondary);">Результат — 2-й рівень</div>
+      <div class="finish-score">${correct} / ${list.length}</div>
+      <div class="finish-msg">${pct}% правильних відповідей<br>${msg}</div>
+      ${wrongIdx.length>0?`<p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:1rem;">Помилок: ${wrongIdx.length} — натисни "Тільки помилки" щоб повторити.</p>`:''}
+      <div class="nav" style="display:flex;">
+        <button class="btn primary" onclick="restart()">Пройти ще раз</button>
+      </div>
+    </div>`;
+}
+
+render();
+</script>
