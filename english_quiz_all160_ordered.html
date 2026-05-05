@@ -1,0 +1,319 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.wrap { padding: 1rem 0; max-width: 660px; font-family: var(--font-sans); }
+.progress-bar-bg { background: var(--color-background-secondary); border-radius: 8px; height: 8px; margin-bottom: 1rem; }
+.progress-bar-fg { background: #1D9E75; height: 8px; border-radius: 8px; transition: width 0.4s; }
+.stats { display: flex; gap: 10px; margin-bottom: 1rem; }
+.stat { flex: 1; background: var(--color-background-secondary); border-radius: 8px; padding: 8px 12px; text-align: center; }
+.stat .num { font-size: 20px; font-weight: 500; }
+.stat .lbl { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
+.green { color: #1D9E75; }
+.red { color: #E24B4A; }
+.card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1rem; }
+.q-num { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 6px; }
+.q-text { font-size: 15px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 1rem; line-height: 1.5; }
+.opts { display: flex; flex-direction: column; gap: 7px; }
+.opt { background: var(--color-background-primary); border: 0.5px solid var(--color-border-secondary); border-radius: 8px; padding: 9px 13px; font-size: 13px; color: var(--color-text-primary); cursor: pointer; text-align: left; transition: background 0.12s; }
+.opt:hover:not(:disabled) { background: var(--color-background-secondary); }
+.opt.ok { background: #EAF3DE; border-color: #639922; color: #27500A; }
+.opt.bad { background: #FCEBEB; border-color: #A32D2D; color: #501313; }
+.exp { margin-top: 10px; padding: 9px 13px; background: var(--color-background-secondary); border-radius: 8px; font-size: 13px; color: var(--color-text-secondary); border-left: 3px solid #1D9E75; line-height: 1.5; display: none; }
+.exp.wrong { border-left-color: #E24B4A; }
+.nav { display: none; gap: 10px; margin-top: 10px; }
+.btn { flex: 1; padding: 9px; border-radius: 8px; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); font-size: 13px; cursor: pointer; color: var(--color-text-primary); }
+.btn:hover { background: var(--color-background-secondary); }
+.btn.primary { background: #1D9E75; color: white; border-color: #0F6E56; font-weight: 500; }
+.btn.primary:hover { background: #0F6E56; }
+.btn.secondary { background: var(--color-background-primary); }
+.finish { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: 12px; padding: 2rem; text-align: center; }
+.finish-score { font-size: 44px; font-weight: 500; color: #1D9E75; margin: 0.75rem 0 0.5rem; }
+.finish-msg { font-size: 14px; color: var(--color-text-secondary); margin-bottom: 1.25rem; }
+.mode-row { display: flex; gap: 10px; margin-bottom: 1rem; }
+.mode-btn { flex: 1; padding: 7px; border-radius: 8px; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); font-size: 12px; cursor: pointer; color: var(--color-text-secondary); }
+.mode-btn.active { border-color: #1D9E75; color: #1D9E75; background: #EAF3DE; }
+</style>
+
+<div class="wrap">
+  <div class="progress-bar-bg"><div class="progress-bar-fg" id="prog"></div></div>
+  <div class="stats">
+    <div class="stat"><div class="num green" id="s-ok">0</div><div class="lbl">Правильно</div></div>
+    <div class="stat"><div class="num" id="s-cur">—</div><div class="lbl">Питання</div></div>
+    <div class="stat"><div class="num" id="s-left">—</div><div class="lbl">Залишилось</div></div>
+    <div class="stat"><div class="num red" id="s-bad">0</div><div class="lbl">Помилок</div></div>
+  </div>
+  <div class="mode-row">
+    <button class="mode-btn active" id="m-order" onclick="setMode('order')">По порядку</button>
+    <button class="mode-btn" id="m-shuffle" onclick="setMode('shuffle')">Перемішати</button>
+    <button class="mode-btn" id="m-wrong" onclick="setMode('wrong')">Тільки помилки</button>
+  </div>
+  <div id="q-area"></div>
+</div>
+
+<script>
+const QS = [
+  {q:"The phone _____. Can you answer it please?",o:["rings","is ringing","ring","rang"],a:1,u:"Зараз дзвонить → Present Continuous (is ringing)."},
+  {q:"You can keep my iPod. I __________ it any more.",o:["don't use","doesn't use","didn't use","am not using"],a:0,u:"Постійний факт → Present Simple (don't use)."},
+  {q:"I __________ for my pen. Have you seen it?",o:["looking","am looking","look","looked"],a:1,u:"Зараз шукаю → Present Continuous (am looking)."},
+  {q:"To ride on a train =",o:["to follow a train","to see the train off","to move the train","to catch the train"],a:3,u:"'To catch the train' = сісти/встигнути на потяг."},
+  {q:"Purchased for a little money =",o:["cheaply","low-paid","small-paid","non-expensive"],a:0,u:"Cheaply = купити дешево."},
+  {q:"Customers are happier when the staff are ______________.",o:["satisfactory","well-paid","busy","loyal"],a:1,u:"Well-paid = добре оплачуваний персонал."},
+  {q:"To get off a ship =",o:["disship","disembark","get out","dissolve"],a:1,u:"Disembark = зійти з корабля або літака."},
+  {q:"A style of cooking from a certain place =",o:["speciality","kitchen","cuisine","dish"],a:2,u:"Cuisine = кухня (стиль приготування їжі певного регіону)."},
+  {q:"Try to solve your problems __________ with the supervisor.",o:["avoiding","ignoring","directly","strictly"],a:2,u:"Directly = безпосередньо, прямо."},
+  {q:"A card that says you are allowed to drive a car =",o:["driver's license","driver's permission","driver's allowance","driver's passport"],a:0,u:"Driver's license = водійські права."},
+  {q:"I doubt that it was _____ working so hard.",o:["worth","waste","need","rewarding"],a:0,u:"Worth = варто. 'It was worth it' = воно того варте."},
+  {q:"A lot of work _______ to be done.",o:["remains","remain","will remain","remained"],a:0,u:"'A lot of work' = однина → remains (з s)."},
+  {q:"Shannon dropped books, so I picked ___________ up for her.",o:["you","it","its","them"],a:3,u:"Books = множина → them."},
+  {q:"The boys are holding up ________ hands.",o:["their","there","them","they"],a:0,u:"Their = їхній (присвійний займенник)."},
+  {q:"A store where you buy items without paying tax =",o:["tax-free shop","duty-free shop","free-tax shop","duty-off shop"],a:1,u:"Duty-free shop = магазин безмитної торгівлі."},
+  {q:"A measure of how much you pay for something =",o:["tax","trade","rate","mortgage"],a:2,u:"Rate = ставка/тариф (наприклад, exchange rate = курс)."},
+  {q:"A type of service where customers order food in their car =",o:["drive-through","drive-in","drive-out","drive-off"],a:0,u:"Drive-through = обслуговування не виходячи з машини."},
+  {q:"To decide who the caller speaks to next =",o:["to subordinate a call","to supervise a call","to direct a call","to research a call"],a:2,u:"To direct a call = переключити дзвінок."},
+  {q:"A person who works below you in an organization =",o:["subordinate","superior","worker","office manager"],a:0,u:"Subordinate = підлеглий. Superior = начальник."},
+  {q:"A person who breaks the law =",o:["deputy","judge","criminal","authorities"],a:2,u:"Criminal = злочинець."},
+  {q:"How many people ____________ in your family?",o:["are there","is there","there are","there"],a:0,u:"Питальна структура 'there is/are'. People = множина → are there."},
+  {q:"Where _______ Sarah live?",o:["is","are","do","does"],a:3,u:"Sarah = she → does (Present Simple, питання)."},
+  {q:"____________ to London on the train yesterday?",o:["Did she go","Did she went","She go","She goes"],a:0,u:"Past Simple питання: Did + підмет + інфінітив (go, не went)."},
+  {q:"George __________ Portuguese, English and a bit of French.",o:["speaks","is speaking","speak","speaking"],a:0,u:"Постійне вміння → Present Simple (speaks)."},
+  {q:"Could you _____ Mr. Bell's number in the directory?",o:["hold on","look up","get through","pick up"],a:1,u:"Look up = знайти (в довіднику або словнику)."},
+  {q:"The telephone is ringing. Why can't you ________ the receiver?",o:["get through","hold on","look up","pick up"],a:3,u:"Pick up the receiver = підняти слухавку."},
+  {q:"Could you _____ for a moment? I'll find out if Mr. Jackson is in.",o:["get out","hold on","look up","pick up"],a:1,u:"Hold on = зачекати хвилинку (на телефоні)."},
+  {q:"You should never ___________ .",o:["give up","to follow his advice","to give up","given up"],a:0,u:"After 'should never' → bare infinitive: give up (без 'to')."},
+  {q:"We don't __________ which airport this plane goes from.",o:["know","think","like","knowing"],a:0,u:"Don't know = не знаємо. 'Knowing' після don't — неправильно."},
+  {q:"They _________ the house last week.",o:["cleaned","clean","cleaning","was cleaning"],a:0,u:"Last week = минулий час → Past Simple (cleaned)."},
+  {q:"Mike __________ to class yesterday because he was at the hospital.",o:["didn't come","came","not come","came not"],a:0,u:"Заперечення в Past Simple: didn't + інфінітив (come)."},
+  {q:"Mike _______ never been to Georgia.",o:["has","have","is","has not"],a:0,u:"Mike = he → has (Present Perfect: has never been)."},
+  {q:"The house was _____ in 1987.",o:["built","building","build","builded"],a:0,u:"Passive voice: was + 3-тя форма дієслова (built)."},
+  {q:"Can I _________ the window?",o:["open","opens","to open","opening"],a:0,u:"After modal 'can' → bare infinitive (open)."},
+  {q:"He wants ________ sugar.",o:["some","little","a few","many"],a:0,u:"Some = трохи (з незлічуваними іменниками в стверджуваль. реченнях)."},
+  {q:"We get up ______ 6 o'clock.",o:["in","at","on","near"],a:1,u:"AT + конкретний час (at 6 o'clock, at noon)."},
+  {q:"_____ you believe in God?",o:["Do","Are","Does","Were"],a:0,u:"You → Do (Present Simple питання)."},
+  {q:"How ________ water is there in the kettle?",o:["much","many","little","a few"],a:0,u:"Water = незлічуване → much. Many — тільки для злічуваних."},
+  {q:"Are you _______ student?",o:["a","an","the","–"],a:0,u:"Student починається з приголосного звуку → a student."},
+  {q:"Britain is _________ island.",o:["an","the","a","–"],a:0,u:"Island починається з голосного → an island."},
+  {q:"The river Nile _________ into the Mediterranean.",o:["flows","is flowing","flowes","flowing"],a:0,u:"Постійний факт → Present Simple (flows). 'Flowes' — не існує!"},
+  {q:"We (hear) an interesting talk at the conference last week.",o:["heard","had heard","having heard","has heard"],a:0,u:"Last week = минулий час → Past Simple (heard)."},
+  {q:"_______ your lifestyle _________ since you got a promotion?",o:["Has/changed","Have/changed","Has/change","Have/change"],a:0,u:"Lifestyle = it → Has. Present Perfect: Has ... changed."},
+  {q:"Frank is suffering from exhaustion. He ___________ away from the office all this week.",o:["have been","has been","had been","has being"],a:1,u:"He → has been (Present Perfect Continuous)."},
+  {q:"I _________ the deadline once again. My boss will be angry.",o:["have missed","had missed","having missed","missing"],a:0,u:"Результат відчутний зараз → Present Perfect (have missed)."},
+  {q:"Eliza ______ already a workaholic when she was a student.",o:["were","was","has been","being"],a:1,u:"Eliza = she → was (Past Simple)."},
+  {q:"The bank is at the end ________ the road.",o:["of","on","at","in"],a:0,u:"At the end OF the road = в кінці дороги."},
+  {q:"What is Sarah _____________ right now?",o:["doing","do","did","does"],a:0,u:"Right now → Present Continuous: is + doing."},
+  {q:"Pam is ______ than Helen.",o:["taller","tall","more tall","talls"],a:0,u:"Короткі прикметники: tall → taller (+ er)."},
+  {q:"This is the __________ thing in my life.",o:["bad","worst","more bad","baddest"],a:1,u:"Найвища ступінь: bad → worst (неправильна форма!)."},
+  {q:"English is _______ than Japanese.",o:["easier","easiest","easy","more easy"],a:0,u:"Easy → easier (y → ier у порівняльному ступені)."},
+  {q:"Karen is ________ than her sister.",o:["older","more older","old","elder"],a:0,u:"Old → older (порівняльний). Elder — лише для родини."},
+  {q:"He _________ the dog for a walk every day.",o:["take","takes","taking","is taking"],a:1,u:"He, every day → Present Simple (takes)."},
+  {q:"________ she live with her parents?",o:["does","have","why","has"],a:0,u:"She → does (Present Simple питання)."},
+  {q:"Mary doesn't _________ TV very often.",o:["watch","watches","watching","watched"],a:0,u:"After doesn't → bare infinitive (watch)."},
+  {q:"__________ it snow in winter?",o:["does","do","has","have"],a:0,u:"It → does (Present Simple питання)."},
+  {q:"He _______ very tired yesterday.",o:["was","were","being","is"],a:0,u:"He, yesterday → was (Past Simple)."},
+  {q:"Is she _________ now?",o:["working","work","worked","works"],a:0,u:"Is she + ing → Present Continuous (working)."},
+  {q:"There is a ___________ teachers at the school.",o:["short","shortage of","short of","shortage"],a:1,u:"There is a shortage OF = є нестача (чогось)."},
+  {q:"The prices here are __________ at a discount store.",o:["higher than those","higher then those","higher then","higher than this"],a:0,u:"Порівняння: higher THAN those (не 'then'!). Those = ті ціни там."},
+  {q:"Make up a plural form of the noun 'goose'.",o:["geese","gooses","geeses","gosees"],a:0,u:"Goose → geese (неправильний множина, як tooth → teeth)."},
+  {q:"Make up a plural form of the noun 'retina'.",o:["retinae","retinas","retina","retin"],a:0,u:"Retina — латинський іменник, множина: retinae."},
+  {q:"Make up a plural form of the noun 'deer'.",o:["deer","deers","deern","deere"],a:0,u:"Deer → deer (однакова форма в однині та множині)."},
+  {q:"Flying is not only faster but also ______ than travelling by car.",o:["safer","safest","safe","safier"],a:0,u:"Порівняльний ступінь: safe → safer."},
+  {q:"My sister and I ________ leaving.",o:["are","is","am","'m"],a:0,u:"My sister and I = we → are."},
+  {q:"We ________ got three children.",o:["have","has","are","were"],a:0,u:"We → have (have got = маємо)."},
+  {q:"Sue ____ with her aunt this week.",o:["is staying","stays","stayed","are staying"],a:0,u:"This week = тимчасова дія → Present Continuous (is staying)."},
+  {q:"Cathy _________ to school when it started to rain.",o:["is walking","was walking","will be walking","walked"],a:1,u:"Фонова дія в минулому → Past Continuous (was walking)."},
+  {q:"She's at the bus station. She __________ travel by bus.",o:["is going to","will be","is","shall"],a:0,u:"Намір або план → be going to."},
+  {q:"What ________ Pam doing yesterday at three o'clock?",o:["was","were","is","will"],a:0,u:"Pam = she → was (Past Continuous питання)."},
+  {q:"It rarely ________ in the desert.",o:["is raining","rain","rains","rained"],a:2,u:"Rarely = факт → Present Simple (rains)."},
+  {q:"Dad _______ dinner right now.",o:["makes","make","is making","made"],a:2,u:"Right now → Present Continuous (is making)."},
+  {q:"Wool __________ from sheep.",o:["comes","come","is coming","came"],a:0,u:"Постійний факт → Present Simple (comes)."},
+  {q:"They usually ____ out on Saturdays.",o:["eat","eating","are eating","were eating"],a:0,u:"Usually = звичка → Present Simple (eat)."},
+  {q:"The bus _____ at 5 o'clock.",o:["is arrived","arrives","are arriving","arrive"],a:1,u:"Розклад руху → Present Simple (arrives)."},
+  {q:"The film _____ in ten minutes.",o:["starts","is started","was starting","started"],a:0,u:"Розклад → Present Simple (starts)."},
+  {q:"Fiona __________ at some photos.",o:["is looking","looks","looking","looked"],a:0,u:"Контекст зараз → Present Continuous (is looking)."},
+  {q:"Look! The children ________ so much fun at the circus!",o:["are having","have","has","is having"],a:0,u:"Look! = прямо зараз → Present Continuous (are having)."},
+  {q:"This jacket ________ you perfectly.",o:["is fitting","fits","fitted","was fitting"],a:1,u:"Fit = дієслово стану, не вживається в Continuous → fits."},
+  {q:"Ron ________ to become a pilot.",o:["is wanting","wants","is wanted","was wanting"],a:1,u:"Want = дієслово стану → Present Simple (wants)."},
+  {q:"I __________ the meaning of that word.",o:["am not understanding","don't understand","didn't understood","doesn't understand"],a:1,u:"Understand = дієслово стану → Present Simple (don't understand)."},
+  {q:"He _______ playing football.",o:["are loving","loves","were loved","love"],a:1,u:"Love = дієслово стану, he → Present Simple (loves)."},
+  {q:"The stars ____ at night.",o:["is shining","shines","shine","shone"],a:2,u:"Stars = they → Present Simple (shine, без s)."},
+  {q:"Do you play basketball at weekends? Yes, I ______ do.",o:["never","often","already","yet"],a:1,u:"Відповідь підтверджує звичку → often (часто)."},
+  {q:"_______ you go to the party yesterday?",o:["Does","Did","Do","Will"],a:1,u:"Yesterday = Past Simple питання → Did."},
+  {q:"The next show _______ at 8:30 pm.",o:["starting","starts","start","started"],a:1,u:"Розклад → Present Simple (starts)."},
+  {q:"We left the concert hall three hours ____.",o:["past","ago","now","since"],a:1,u:"Ago = тому назад (three hours ago)."},
+  {q:"George _________ a bath at the moment.",o:["is having","has had","have","had"],a:0,u:"At the moment → Present Continuous (is having)."},
+  {q:"I _________ of buying a new car.",o:["thinked","am thinking","thinks","thought"],a:1,u:"Зараз думаю → Present Continuous (am thinking)."},
+  {q:"The Sun ________ in the east.",o:["are rising","rise","rises","rose"],a:2,u:"Постійний факт, The Sun = it → Present Simple (rises)."},
+  {q:"This apple pie ________ delicious.",o:["tasting","tastes","are tasting","was tasted"],a:1,u:"Taste = дієслово стану → Present Simple (tastes)."},
+  {q:"Do you listen to the radio? Yes, I ________ do.",o:["never","just","sometimes","ever"],a:2,u:"Відповідь підтверджує загальну звичку → sometimes (іноді)."},
+  {q:"Tommy usually ________ his homework after lunch.",o:["do","does","doing","was doing"],a:1,u:"Usually, he → Present Simple (does)."},
+  {q:"Did you ________ Madame Tussaud's while in London?",o:["visiting","visits","visit","visited"],a:2,u:"Did + bare infinitive (visit, не visited)."},
+  {q:"This week we ________ extra English classes in the afternoons.",o:["are having","has","is having","were had"],a:0,u:"This week = тимчасовий розклад → Present Continuous (are having)."},
+  {q:"What __________ next weekend?",o:["do you do","are you doing","did","were doing"],a:1,u:"Запланована майбутня дія → Present Continuous (are you doing)."},
+  {q:"What time ____________?",o:["does the film start","is the film starts","do the film start","does the film started"],a:0,u:"The film = it → does + інфінітив (start)."},
+  {q:"Our English teacher ________ our projects right now.",o:["is marking","marked","mark","are marking"],a:0,u:"Right now → Present Continuous (is marking)."},
+  {q:"What time _____________ work on weekdays?",o:["are you finishing","do you finish your","did you finishing","does you finish"],a:1,u:"Звичка → Present Simple (do you finish your work)."},
+  {q:"You can keep my phone. I __________ it any more.",o:["don't use","doesn't use","didn't use","am not using"],a:0,u:"Постійний факт → Present Simple (don't use)."},
+  {q:"I __________ for my pencil. Have you seen it?",o:["looking","am looking","look","looked"],a:1,u:"Зараз шукаю → Present Continuous (am looking)."},
+  {q:"You should have ___________ my advice!",o:["following","follows","follow","followed"],a:3,u:"Should have + 3-тя форма (followed) = треба було послухати."},
+  {q:"Purchased for a big money =",o:["costly","low-paid","small-paid","non-expensive"],a:0,u:"Costly = дорогий, коштовний."},
+  {q:"See you ______ Monday.",o:["in","at","by","on"],a:3,u:"ON + день тижня (on Monday, on Friday)."},
+  {q:"See you _______ 5 p.m.",o:["in","at","on","by"],a:1,u:"AT + конкретний час (at 5 p.m.)."},
+  {q:"See you ________ 15 minutes.",o:["at","on","in","after"],a:2,u:"IN + відрізок часу в майбутньому (in 15 minutes)."},
+  {q:"Laura was ......... with her daughter's decision to go to college.",o:["gratified","fulfilled","pleased","entertained"],a:2,u:"Pleased with = задоволена чимось."},
+  {q:"A card that says you are allowed to drive a car =",o:["driver's license","driver's permission","driver's allowance","driver's passport"],a:0,u:"Driver's license = водійські права."},
+  {q:"I doubt that it was _____ working so hard.",o:["worth","waste","need","rewarding"],a:0,u:"Worth = варто (it was worth it)."},
+  {q:"A lot of work _______ to be done.",o:["remains","remain","will remain","remained"],a:0,u:"'A lot of work' = однина → remains."},
+  {q:"They let me use the computer game on ......... for 30 days.",o:["example","model","sample","trial"],a:3,u:"On trial = на пробний період."},
+  {q:"My passport will expire in June so I need to ......... it.",o:["renew","refresh","recharge","review"],a:0,u:"Renew a passport = поновити паспорт."},
+  {q:"The captain and ......... would like to welcome you on board.",o:["staff","crew","team","cast"],a:1,u:"Crew = екіпаж (на кораблі або літаку)."},
+  {q:"A measure of how much you pay for something =",o:["tax","trade","rate","mortgage"],a:2,u:"Rate = ставка або тариф."},
+  {q:"A type of service where customers order food in their car =",o:["drive-through","drive-in","drive-out","drive-off"],a:0,u:"Drive-through = обслуговування не виходячи з машини."},
+  {q:"Harris has been ......... with smuggling antique goods into the country.",o:["arrested","sentenced","charged","accused"],a:2,u:"Charged with = звинувачений у (судовий термін)."},
+  {q:"Jill has never _______ abroad.",o:["been","was","be","were"],a:0,u:"Present Perfect: has never been abroad."},
+  {q:"This play was ________ by W. Shakespeare.",o:["wrote","write","written","writing"],a:2,u:"Passive voice: was + 3-тя форма (written)."},
+  {q:"The unemployment rate ......... by 20% last year.",o:["increased","enlarged","broadened","widened"],a:0,u:"Increased by = зріс на (для відсотків та чисел)."},
+  {q:"Where _______ Joe live?",o:["is","are","do","does"],a:3,u:"Joe = he → does (Present Simple питання)."},
+  {q:"____________ to Manchester on the train yesterday?",o:["Did she go","Did she went","She go","She goes"],a:0,u:"Past Simple питання: Did + підмет + інфінітив (go)."},
+  {q:"William doesn't __________ Portuguese, English and a bit of French.",o:["speak","speaking","speaks","spoke"],a:0,u:"After doesn't → bare infinitive (speak)."},
+  {q:"Could you _____ Jonathan's number in the directory?",o:["hold on","look up","get through","pick up"],a:1,u:"Look up = знайти (в довіднику або словнику)."},
+  {q:"See what you have ______!",o:["did","does","do","done"],a:3,u:"Present Perfect: have + 3-тя форма (done)."},
+  {q:"Could you _____ for a moment?",o:["get out","hold on","look up","pick up"],a:1,u:"Hold on = зачекати хвилинку."},
+  {q:"You should never ___________ .",o:["give up","to follow his advice","to give up","given up"],a:0,u:"After 'should never' → bare infinitive: give up."},
+  {q:"We don't __________ whether it is ok to do so.",o:["know","think","like","knowing"],a:0,u:"Don't know = не знаємо."},
+  {q:"They _________ the apartment last week.",o:["cleaned","clean","cleaning","was cleaning"],a:0,u:"Last week → Past Simple (cleaned)."},
+  {q:"Mike __________ in school for a long time.",o:["has not been","was","were","be"],a:0,u:"Present Perfect з 'for a long time': has not been."},
+  {q:"Mike _______ never been to Georgia.",o:["has","have","is","has not"],a:0,u:"Mike = he → has (Present Perfect: has never been)."},
+  {q:"The house was _____ in 1987.",o:["built","building","build","builded"],a:0,u:"Passive voice: was + 3-тя форма (built)."},
+  {q:"Can I _________ the door?",o:["open","opens","to open","opening"],a:0,u:"After modal 'can' → bare infinitive (open)."},
+  {q:"He wants ________ sugar.",o:["some","little","a few","many"],a:0,u:"Some = трохи (незлічуване в стверджувальному реченні)."},
+  {q:"We get up ______ 6 o'clock every day.",o:["in","at","on","near"],a:1,u:"AT + конкретний час (at 6 o'clock)."},
+  {q:"_____ he believe in the power of the law?",o:["Does","Are","Do","Were"],a:0,u:"He → Does (Present Simple питання)."},
+  {q:"How ________ water is there in the bottle?",o:["much","many","little","a few"],a:0,u:"Water = незлічуване → much."},
+  {q:"Are you _______ student?",o:["a","an","the","–"],a:0,u:"Student починається з приголосного → a student."},
+  {q:"Britain is _________ island.",o:["an","the","a","–"],a:0,u:"Island починається з голосного → an island."},
+  {q:"Do you think this river ________ into the Pacific?",o:["flows","is flowing","flowes","flowing"],a:0,u:"Постійний факт → Present Simple (flows)."},
+  {q:"We (hear) an interesting talk at the conference last week.",o:["heard","had heard","having heard","has heard"],a:0,u:"Last week → Past Simple (heard)."},
+  {q:"_______ your lifestyle _________ since you got a promotion?",o:["Has/changed","Have/changed","Has/change","Have/change"],a:0,u:"Lifestyle = it → Has. Present Perfect: Has ... changed."},
+  {q:"George is suffering from exhaustion. He ___________ away from the office all this week.",o:["have been","has been","had been","has being"],a:1,u:"He → has been (Present Perfect Continuous)."},
+  {q:"I _________ the deadline once again.",o:["have missed","had missed","having missed","missing"],a:0,u:"Результат зараз → Present Perfect (have missed)."},
+  {q:"Eliza ______ already a workaholic when she was a student.",o:["were","was","has been","being"],a:1,u:"Eliza = she → was (Past Simple)."},
+  {q:"The bank is at the end ________ the road.",o:["of","on","at","in"],a:0,u:"At the end OF the road = в кінці дороги."},
+  {q:"What is Sarah _____________ right now?",o:["doing","do","did","does"],a:0,u:"Right now → Present Continuous (doing)."},
+  {q:"Pam is ______ than Helen.",o:["taller","tall","more tall","talls"],a:0,u:"tall → taller (порівняльний ступінь, + er)."},
+  {q:"This is the __________ thing in my life.",o:["bad","worst","more bad","baddest"],a:1,u:"bad → worst (найвища ступінь, неправильна форма)."},
+  {q:"English is _______ than Japanese.",o:["easier","easiest","easy","more easy"],a:0,u:"easy → easier (y → ier)."},
+  {q:"Karen is ________ than her sister.",o:["older","more older","old","elder"],a:0,u:"old → older (порівняльний). Elder — лише для родини."},
+  {q:"He _________ the dog for a walk every day.",o:["take","takes","taking","is taking"],a:1,u:"He, every day → Present Simple (takes)."},
+  {q:"________ she live with her parents?",o:["does","have","why","has"],a:0,u:"She → does (Present Simple питання)."},
+  {q:"Mary doesn't _________ TV very often.",o:["watch","watches","watching","watched"],a:0,u:"After doesn't → bare infinitive (watch)."},
+  {q:"__________ it snow in winter?",o:["does","do","has","have"],a:0,u:"It → does (Present Simple питання)."},
+  {q:"He _______ very tired yesterday.",o:["was","were","being","is"],a:0,u:"He, yesterday → was (Past Simple)."},
+  {q:"Is she _________ now?",o:["working","work","worked","works"],a:0,u:"Is she + ing → Present Continuous (working)."},
+  {q:"There is a ___________ teachers at the school.",o:["short","shortage of","short of","shortage"],a:1,u:"There is a shortage OF = є нестача чогось."},
+  {q:"The prices here are __________ at a discount store.",o:["higher than those","higher then those","higher then","higher than this"],a:0,u:"higher THAN those (than, не then!)."},
+  {q:"Make up a plural form of the noun 'tooth'.",o:["teeth","toothes","tooths","toos"],a:0,u:"Tooth → teeth (неправильний множина)."},
+  {q:"Make up a plural form of the noun 'tomato'.",o:["tomatoes","tomatos","tomats","tomates"],a:0,u:"Tomato → tomatoes (додаємо -es після -o)."},
+];
+
+let mode = 'order';
+let list = [...QS.keys()];
+let wrongIdx = [];
+let idx = 0, correct = 0, wrong = 0, answered = false;
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('m-' + m).classList.add('active');
+  restart();
+}
+
+function getList() {
+  if (mode === 'shuffle') {
+    const a = [...QS.keys()];
+    for (let i = a.length-1; i>0; i--) {
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  }
+  if (mode === 'wrong') return [...wrongIdx];
+  return [...QS.keys()];
+}
+
+function restart() {
+  if (mode === 'wrong' && wrongIdx.length === 0) {
+    document.getElementById('q-area').innerHTML = '<div class="card" style="text-align:center;color:var(--color-text-secondary);font-size:14px;padding:2rem;">Ще немає помилок! Спершу пройди тест.</div>';
+    return;
+  }
+  list = getList();
+  idx = 0; correct = 0; wrong = 0;
+  if (mode !== 'wrong') wrongIdx = [];
+  render();
+}
+
+function updateStats() {
+  document.getElementById('s-ok').textContent = correct;
+  document.getElementById('s-bad').textContent = wrong;
+  document.getElementById('s-cur').textContent = idx + 1;
+  document.getElementById('s-left').textContent = list.length - idx;
+  document.getElementById('prog').style.width = Math.round((idx / list.length) * 100) + '%';
+}
+
+function render() {
+  if (idx >= list.length) { renderFinish(); return; }
+  answered = false;
+  const q = QS[list[idx]];
+  const globalNum = list[idx] + 1;
+  updateStats();
+  document.getElementById('q-area').innerHTML = `
+    <div class="card">
+      <div class="q-num">Питання ${globalNum} з ${QS.length} &nbsp;·&nbsp; ${idx+1} з ${list.length} у цьому режимі</div>
+      <div class="q-text">${q.q}</div>
+      <div class="opts" id="opts">
+        ${q.o.map((o,i) => `<button class="opt" onclick="pick(${i})">${o}</button>`).join('')}
+      </div>
+      <div class="exp" id="exp"></div>
+    </div>
+    <div class="nav" id="nav">
+      <button class="btn primary" onclick="next()">Далі →</button>
+    </div>`;
+}
+
+function pick(i) {
+  if (answered) return;
+  answered = true;
+  const q = QS[list[idx]];
+  document.querySelectorAll('.opt').forEach((b, bi) => {
+    b.disabled = true;
+    if (bi === q.a) b.classList.add('ok');
+    if (bi === i && i !== q.a) b.classList.add('bad');
+  });
+  const ok = i === q.a;
+  if (ok) correct++; else { wrong++; if (!wrongIdx.includes(list[idx])) wrongIdx.push(list[idx]); }
+  updateStats();
+  const exp = document.getElementById('exp');
+  exp.style.display = 'block';
+  exp.className = 'exp' + (ok ? '' : ' wrong');
+  exp.innerHTML = ok ? '✓ Правильно! ' + q.u : '✗ Неправильно. Правильна відповідь: <strong>' + q.o[q.a] + '</strong>. ' + q.u;
+  document.getElementById('nav').style.display = 'flex';
+}
+
+function next() { idx++; render(); }
+
+function renderFinish() {
+  const pct = Math.round((correct / list.length) * 100);
+  const msg = pct >= 80 ? '🎉 Відмінно! Ти готовий до іспиту!' : pct >= 60 ? '👍 Непогано! Пройди ще раз помилки.' : '📚 Потрібно ще попрактикуватись. Не здавайся!';
+  document.getElementById('prog').style.width = '100%';
+  document.getElementById('q-area').innerHTML = `
+    <div class="finish">
+      <div style="font-size:14px;color:var(--color-text-secondary);">Результат</div>
+      <div class="finish-score">${correct} / ${list.length}</div>
+      <div class="finish-msg">${pct}% правильних відповідей<br>${msg}</div>
+      ${wrongIdx.length > 0 ? `<p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:1rem;">Помилок накопичено: ${wrongIdx.length} — натисни "Тільки помилки" вгорі щоб повторити їх.</p>` : ''}
+      <div class="nav" style="display:flex;">
+        <button class="btn primary" onclick="restart()">Пройти ще раз</button>
+      </div>
+    </div>`;
+}
+
+render();
+</script>
