@@ -1,0 +1,460 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.wrap { padding: 1rem 0; max-width: 680px; font-family: var(--font-sans); }
+.tabs { display: flex; gap: 6px; margin-bottom: 1rem; flex-wrap: wrap; }
+.tab { padding: 6px 12px; border-radius: 20px; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); font-size: 12px; cursor: pointer; color: var(--color-text-secondary); }
+.tab.active { background: #1D9E75; color: white; border-color: #0F6E56; }
+.prog-bg { background: var(--color-background-secondary); border-radius: 8px; height: 6px; margin-bottom: 1rem; }
+.prog-fg { background: #1D9E75; height: 6px; border-radius: 8px; transition: width 0.4s; }
+.stats { display: flex; gap: 10px; margin-bottom: 1rem; }
+.stat { flex: 1; background: var(--color-background-secondary); border-radius: 8px; padding: 7px 10px; text-align: center; }
+.stat .num { font-size: 18px; font-weight: 500; }
+.stat .lbl { font-size: 10px; color: var(--color-text-secondary); margin-top: 1px; }
+.green { color: #1D9E75; } .red { color: #E24B4A; }
+
+/* FLASHCARD mode */
+.flashcard-wrap { perspective: 1000px; cursor: pointer; margin-bottom: 1rem; }
+.flashcard { width: 100%; min-height: 160px; border-radius: 14px; position: relative; transform-style: preserve-3d; transition: transform 0.45s; }
+.flashcard.flipped { transform: rotateY(180deg); }
+.card-face { position: absolute; width: 100%; min-height: 160px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; text-align: center; backface-visibility: hidden; }
+.card-front { background: #1D9E75; color: white; }
+.card-back { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); color: var(--color-text-primary); transform: rotateY(180deg); }
+.card-label { font-size: 11px; opacity: 0.7; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+.card-word { font-size: 22px; font-weight: 600; }
+.card-sub { font-size: 13px; margin-top: 6px; opacity: 0.8; }
+.card-hint { font-size: 12px; margin-top: 4px; opacity: 0.6; }
+.card-meaning { font-size: 18px; font-weight: 500; color: #1D9E75; }
+.card-ukr { font-size: 14px; color: var(--color-text-secondary); margin-top: 6px; }
+.flip-hint { text-align: center; font-size: 12px; color: var(--color-text-secondary); margin-bottom: 10px; }
+.nav-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.btn { flex: 1; padding: 9px; border-radius: 8px; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); font-size: 13px; cursor: pointer; color: var(--color-text-primary); }
+.btn:hover { background: var(--color-background-secondary); }
+.btn.ok { background: #EAF3DE; border-color: #639922; color: #27500A; font-weight: 500; }
+.btn.bad { background: #FCEBEB; border-color: #A32D2D; color: #501313; font-weight: 500; }
+.btn.primary { background: #1D9E75; color: white; border-color: #0F6E56; font-weight: 500; }
+
+/* QUIZ mode */
+.q-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1rem; }
+.q-num { font-size: 11px; color: var(--color-text-secondary); margin-bottom: 6px; }
+.q-type { font-size: 11px; color: #1D9E75; font-weight: 500; margin-bottom: 8px; }
+.q-text { font-size: 16px; font-weight: 600; color: var(--color-text-primary); margin-bottom: 1rem; }
+.opts { display: flex; flex-direction: column; gap: 7px; }
+.opt { background: var(--color-background-primary); border: 0.5px solid var(--color-border-secondary); border-radius: 8px; padding: 9px 13px; font-size: 13px; color: var(--color-text-primary); cursor: pointer; text-align: left; }
+.opt:hover:not(:disabled) { background: var(--color-background-secondary); }
+.opt.right { background: #EAF3DE; border-color: #639922; color: #27500A; }
+.opt.wrong { background: #FCEBEB; border-color: #A32D2D; color: #501313; }
+.exp { margin-top: 10px; padding: 9px 13px; background: var(--color-background-secondary); border-radius: 8px; font-size: 13px; color: var(--color-text-secondary); border-left: 3px solid #1D9E75; display: none; }
+.exp.bad { border-left-color: #E24B4A; }
+.next-nav { display: none; gap: 10px; margin-top: 10px; }
+
+/* CHEATSHEET */
+.sheet { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: 12px; overflow: hidden; }
+.sheet-section { border-bottom: 0.5px solid var(--color-border-tertiary); }
+.sheet-title { padding: 10px 14px; background: var(--color-background-secondary); font-size: 12px; font-weight: 600; color: #1D9E75; cursor: pointer; display: flex; justify-content: space-between; }
+.sheet-rows { display: none; }
+.sheet-rows.open { display: block; }
+.sheet-row { display: flex; padding: 8px 14px; border-bottom: 0.5px solid var(--color-border-tertiary); font-size: 13px; gap: 10px; }
+.sheet-row:last-child { border-bottom: none; }
+.sheet-en { flex: 1; color: var(--color-text-primary); font-weight: 500; }
+.sheet-ua { flex: 1; color: var(--color-text-secondary); }
+.finish-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: 12px; padding: 2rem; text-align: center; }
+.finish-score { font-size: 44px; font-weight: 500; color: #1D9E75; margin: 0.75rem 0 0.5rem; }
+</style>
+
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab active" onclick="setTab('flash')">🃏 Флешкарти</button>
+    <button class="tab" onclick="setTab('quiz')">✏️ Тест</button>
+    <button class="tab" onclick="setTab('sheet')">📋 Шпаргалка</button>
+  </div>
+  <div id="main-area"></div>
+</div>
+
+<script>
+const CATS = {
+  "Ідіоми (прості)": [
+    {en:"beat round the bush", ua:"уникати теми", ex:"Stop beating round the bush!"},
+    {en:"a piece of cake", ua:"дуже легко", ex:"This test is a piece of cake."},
+    {en:"teacher's pet", ua:"улюбленець вчителя", ex:"He is the teacher's pet."},
+    {en:"be on cloud nine", ua:"бути дуже щасливим", ex:"She was on cloud nine after the news."},
+    {en:"out of the blue", ua:"несподівано", ex:"He called me out of the blue."},
+    {en:"in a sec", ua:"одразу, зараз", ex:"I'll be there in a sec."},
+    {en:"in no time", ua:"дуже швидко", ex:"She finished in no time."},
+    {en:"once in a blue moon", ua:"дуже рідко", ex:"I eat fast food once in a blue moon."},
+  ],
+  "Ідіоми (дії)": [
+    {en:"hit the road", ua:"вирушати в дорогу", ex:"Let's hit the road!"},
+    {en:"call it a day", ua:"закінчити роботу", ex:"I'm tired, let's call it a day."},
+    {en:"drop by", ua:"заскочити у гості", ex:"Drop by anytime!"},
+    {en:"tag along", ua:"іти разом з кимось", ex:"Can I tag along?"},
+    {en:"crash at someone's place", ua:"ночувати у когось", ex:"Can I crash at your place tonight?"},
+    {en:"bail on plans", ua:"скасувати плани раптово", ex:"He bailed on us again."},
+    {en:"shoot the breeze", ua:"просто балакати", ex:"We shot the breeze for hours."},
+    {en:"grab a bite", ua:"швидко перекусити", ex:"Let's grab a bite before the meeting."},
+  ],
+  "Сленг / емоції": [
+    {en:"stoked", ua:"дуже збуджений", ex:"I'm so stoked about the trip!"},
+    {en:"bummed out", ua:"засмучений, розчарований", ex:"I'm bummed out about the result."},
+    {en:"wired", ua:"повний енергії", ex:"I'm totally wired today."},
+    {en:"zoned out", ua:"відволіктися, витати думками", ex:"Sorry, I zoned out."},
+    {en:"beat", ua:"дуже втомлений", ex:"I'm beat after work."},
+    {en:"broke", ua:"без грошей", ex:"I'm totally broke this week."},
+    {en:"loaded", ua:"дуже багатий", ex:"His family is loaded."},
+    {en:"bummed", ua:"розчарований", ex:"I'm bummed I missed the show."},
+  ],
+  "Розмовні фрази": [
+    {en:"give me a sec", ua:"зачекай хвилинку", ex:"Give me a sec, I'll be right back."},
+    {en:"what's up", ua:"що відбувається", ex:"Hey, what's up?"},
+    {en:"be down (for sth)", ua:"бути зацікавленим", ex:"I'm down for a movie tonight."},
+    {en:"catch you later", ua:"до побачення", ex:"Alright, catch you later!"},
+    {en:"no biggie", ua:"нічого страшного", ex:"You forgot? No biggie."},
+    {en:"my bad", ua:"моя помилка", ex:"Oh, my bad!"},
+    {en:"you bet", ua:"звісно, будь ласка", ex:"Thanks! — You bet!"},
+    {en:"no way", ua:"неможливо / та ні!", ex:"No way that's true!"},
+  ],
+  "Фрази-дії (розмовні)": [
+    {en:"hang tight", ua:"чекати терпляче", ex:"Hang tight, I'm almost done."},
+    {en:"take off", ua:"піти раптово", ex:"He took off without saying goodbye."},
+    {en:"show up", ua:"з'явитися", ex:"She didn't show up to the meeting."},
+    {en:"back out", ua:"відмовитися", ex:"He backed out at the last minute."},
+    {en:"big deal", ua:"щось важливе", ex:"It's a big deal for the company."},
+    {en:"go for it", ua:"спробувати", ex:"Just go for it!"},
+    {en:"knock it off", ua:"припини це", ex:"Knock it off, you're being silly."},
+    {en:"chill", ua:"розслабся", ex:"Chill, it's not a big deal."},
+    {en:"hang in there", ua:"тримайся", ex:"Hang in there, you can do it!"},
+    {en:"give a hand", ua:"допомогти", ex:"Can you give me a hand?"},
+    {en:"check something out", ua:"подивитися на щось", ex:"Check out this new app."},
+    {en:"keep in touch", ua:"залишатися на зв'язку", ex:"Let's keep in touch."},
+    {en:"cut it out", ua:"припини це", ex:"Cut it out!"},
+    {en:"come on", ua:"та годі, не будь смішним", ex:"Come on, it's not that hard."},
+    {en:"get over it", ua:"перестань хвилюватися", ex:"Get over it, it's done."},
+    {en:"give it a shot", ua:"спробувати", ex:"Give it a shot, what do you have to lose?"},
+  ],
+  "Фразові дієслова (бізнес)": [
+    {en:"carry out", ua:"виконувати", ex:"We need to carry out the plan."},
+    {en:"set up", ua:"створювати", ex:"They set up a new company."},
+    {en:"take over", ua:"перебирати контроль", ex:"He took over the department."},
+    {en:"turn down", ua:"відхиляти", ex:"They turned down our offer."},
+    {en:"bring up", ua:"підіймати питання", ex:"She brought up an important issue."},
+    {en:"look into", ua:"вивчати", ex:"We'll look into the problem."},
+    {en:"deal with", ua:"мати справу з", ex:"How do you deal with stress?"},
+    {en:"work out", ua:"знаходити рішення", ex:"Let's work out a plan."},
+    {en:"figure out", ua:"зрозуміти", ex:"I can't figure out this problem."},
+    {en:"come up with", ua:"запропонувати ідею", ex:"She came up with a great idea."},
+    {en:"follow up", ua:"робити подальші дії", ex:"I'll follow up with an email."},
+    {en:"sort out", ua:"вирішити проблему", ex:"Let's sort out this issue."},
+    {en:"run out of", ua:"закінчуватися", ex:"We ran out of time."},
+    {en:"point out", ua:"підкреслювати", ex:"He pointed out the mistake."},
+    {en:"go over", ua:"переглядати", ex:"Let's go over the report."},
+    {en:"cut down on", ua:"скорочувати", ex:"We need to cut down on costs."},
+    {en:"step down", ua:"піти з посади", ex:"The CEO stepped down."},
+    {en:"take on", ua:"перебирати відповідальність", ex:"She took on a new project."},
+    {en:"hand over", ua:"передавати повноваження", ex:"He handed over the keys."},
+    {en:"roll out", ua:"запускати проект", ex:"They rolled out a new product."},
+    {en:"phase out", ua:"поступово припиняти", ex:"They're phasing out old equipment."},
+    {en:"bring in", ua:"залучати", ex:"They brought in new investors."},
+    {en:"draw up", ua:"складати контракт/план", ex:"Let's draw up a contract."},
+    {en:"run into", ua:"зіткнутися з проблемою", ex:"We ran into some issues."},
+    {en:"hold off on", ua:"тимчасово утриматися", ex:"Hold off on the decision."},
+    {en:"come across", ua:"натрапити на", ex:"I came across a great article."},
+    {en:"pay off", ua:"окупитися", ex:"The hard work paid off."},
+    {en:"look ahead", ua:"планувати на майбутнє", ex:"We need to look ahead."},
+    {en:"wrap up", ua:"завершити", ex:"Let's wrap up the meeting."},
+    {en:"break into", ua:"вийти на новий ринок", ex:"They broke into the Asian market."},
+    {en:"bring back", ua:"відновити", ex:"They brought back the old policy."},
+    {en:"put back", ua:"відкласти", ex:"The meeting was put back."},
+    {en:"hand out", ua:"роздавати", ex:"Hand out the documents."},
+    {en:"look up", ua:"перевірити інформацію", ex:"Look it up online."},
+    {en:"go through", ua:"детально розглядати", ex:"Let's go through the details."},
+    {en:"cut back on", ua:"зменшувати витрати", ex:"We need to cut back on spending."},
+    {en:"line up", ua:"домовитися", ex:"Line up a meeting for next week."},
+    {en:"write off", ua:"списати", ex:"We wrote off the loss."},
+    {en:"bring forward", ua:"перенести на раніше", ex:"Can we bring the meeting forward?"},
+    {en:"push back", ua:"відкласти на пізніше", ex:"Let's push back the deadline."},
+    {en:"give up", ua:"відмовитися", ex:"Don't give up!"},
+    {en:"call off", ua:"скасувати", ex:"The event was called off."},
+  ],
+  "Прийменники (дієслова)": [
+    {en:"rely on", ua:"покладатися на"},
+    {en:"belong to", ua:"належати до"},
+    {en:"apply for", ua:"подаватися на"},
+    {en:"believe in", ua:"вірити в"},
+    {en:"complain to", ua:"скаржитися (кому)"},
+    {en:"consist of", ua:"складатися з"},
+    {en:"concentrate on", ua:"зосереджуватися на"},
+    {en:"collide with", ua:"зіштовхнутися з"},
+  ],
+  "Прийменники (прикметники)": [
+    {en:"sorry about", ua:"вибачаюся за"},
+    {en:"famous for", ua:"відомий чимось"},
+    {en:"interested in", ua:"зацікавлений у"},
+    {en:"keen on", ua:"захоплений чимось"},
+    {en:"similar to", ua:"схожий на"},
+    {en:"crowded with", ua:"переповнений"},
+    {en:"tired of", ua:"втомився від"},
+    {en:"different from", ua:"відрізняється від"},
+    {en:"nice to", ua:"добрий до"},
+    {en:"angry about", ua:"злий через"},
+    {en:"pleased with", ua:"задоволений"},
+    {en:"jealous of", ua:"заздрить"},
+    {en:"aware of", ua:"обізнаний про"},
+    {en:"married to", ua:"одружений з"},
+    {en:"reason for", ua:"причина для"},
+    {en:"contact with", ua:"контакт з"},
+    {en:"grateful for", ua:"вдячний за"},
+    {en:"fearful of", ua:"боїться"},
+    {en:"exhausted with", ua:"виснажений"},
+    {en:"alarmed by", ua:"стривожений"},
+    {en:"polite to", ua:"ввічливий до"},
+    {en:"reduced by", ua:"зменшений на"},
+    {en:"sick of", ua:"набридло"},
+    {en:"renowned for", ua:"відомий"},
+    {en:"short of", ua:"не вистачає"},
+    {en:"rich in", ua:"багатий на"},
+    {en:"responsible for", ua:"відповідальний за"},
+    {en:"peculiar to", ua:"характерний для"},
+    {en:"notorious for", ua:"сумнозвісний"},
+    {en:"overwhelmed with", ua:"переповнений (емоціями)"},
+    {en:"sensitive to", ua:"чутливий до"},
+    {en:"quick at", ua:"швидкий у"},
+    {en:"included in", ua:"включений до"},
+    {en:"worried about", ua:"хвилюється про"},
+    {en:"useful for", ua:"корисний для"},
+    {en:"typical of", ua:"типовий для"},
+    {en:"useful to", ua:"корисний (кому)"},
+    {en:"terrified by", ua:"наляканий"},
+    {en:"upset about", ua:"засмучений через"},
+    {en:"profitable to", ua:"вигідний для"},
+    {en:"pressed for", ua:"не вистачає (часу)"},
+    {en:"uncertain of", ua:"невпевнений у"},
+    {en:"used to (do)", ua:"звик робити"},
+    {en:"thankful for", ua:"вдячний за"},
+    {en:"thrilled by", ua:"захоплений"},
+    {en:"worthy of", ua:"гідний"},
+    {en:"superior to", ua:"перевершує"},
+    {en:"prompt in", ua:"оперативний у"},
+    {en:"scared of", ua:"боїться"},
+    {en:"pale with", ua:"блідий від"},
+    {en:"relevant to", ua:"відповідний до"},
+    {en:"satisfied with", ua:"задоволений"},
+    {en:"made from", ua:"зроблений з"},
+    {en:"involved in", ua:"залучений до"},
+  ],
+  "Бізнес колокації": [
+    {en:"make money", ua:"заробляти гроші"},
+    {en:"do good", ua:"робити добро"},
+    {en:"let somebody go", ua:"звільнити когось"},
+    {en:"have fun", ua:"веселитися"},
+    {en:"make sure", ua:"переконатися"},
+    {en:"make a profit", ua:"отримати прибуток"},
+    {en:"meet a deadline", ua:"вкластися у дедлайн"},
+    {en:"close a deal", ua:"укласти угоду"},
+    {en:"launch a product", ua:"запустити продукт"},
+    {en:"gain market share", ua:"захопити частку ринку"},
+    {en:"build relationships", ua:"будувати стосунки"},
+    {en:"cut costs", ua:"скорочувати витрати"},
+    {en:"expand operations", ua:"розширювати діяльність"},
+  ],
+  "Modals (значення)": [
+    {en:"can", ua:"здатність (ability)"},
+    {en:"must", ua:"зобов'язання (obligation)"},
+    {en:"must not", ua:"заборона (prohibition)"},
+    {en:"should", ua:"порада (advice)"},
+  ],
+  "Conditionals (типи)": [
+    {en:"If it rains, I will stay home.", ua:"1-й: реальна умова (if + Present → will)"},
+    {en:"If I had time, I would go.", ua:"2-й: нереальна умова зараз (if + Past → would)"},
+    {en:"If I had had time, I would have gone.", ua:"3-й: нереальна умова в минулому (if + Past Perfect → would have)"},
+    {en:"If I were you, I would take it.", ua:"2-й: порада (If I were you → would)"},
+  ],
+};
+
+const ALL_PAIRS = [];
+Object.entries(CATS).forEach(([cat, pairs]) => {
+  pairs.forEach(p => ALL_PAIRS.push({...p, cat}));
+});
+
+let currentTab = 'flash';
+let flashList = shuffle([...ALL_PAIRS]);
+let flashIdx = 0, flashCorrect = 0, flashWrong = 0, flashWrongList = [];
+let flipped = false;
+
+let quizList = [];
+let quizIdx = 0, quizCorrect = 0, quizWrong = 0, quizAnswered = false, quizWrongList = [];
+
+function shuffle(a) {
+  const b = [...a];
+  for (let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}
+  return b;
+}
+
+function setTab(t) {
+  currentTab = t;
+  document.querySelectorAll('.tab').forEach((b,i) => {
+    b.classList.toggle('active', ['flash','quiz','sheet'][i] === t);
+  });
+  if (t === 'flash') renderFlash();
+  if (t === 'quiz') { quizList = shuffle([...ALL_PAIRS]); quizIdx=0; quizCorrect=0; quizWrong=0; quizWrongList=[]; renderQuiz(); }
+  if (t === 'sheet') renderSheet();
+}
+
+// ---- FLASHCARDS ----
+function renderFlash() {
+  if (flashIdx >= flashList.length) { renderFlashFinish(); return; }
+  flipped = false;
+  const p = flashList[flashIdx];
+  const total = flashList.length;
+  document.getElementById('main-area').innerHTML = `
+    <div class="prog-bg"><div class="prog-fg" id="prog" style="width:${Math.round(flashIdx/total*100)}%"></div></div>
+    <div class="stats">
+      <div class="stat"><div class="num green">${flashCorrect}</div><div class="lbl">Знаю ✓</div></div>
+      <div class="stat"><div class="num">${flashIdx+1} / ${total}</div><div class="lbl">Картка</div></div>
+      <div class="stat"><div class="num red">${flashWrong}</div><div class="lbl">Не знаю ✗</div></div>
+    </div>
+    <div class="flip-hint">👆 Натисни на картку щоб перевернути</div>
+    <div class="flashcard-wrap" onclick="flipCard()">
+      <div class="flashcard" id="fc">
+        <div class="card-face card-front">
+          <div class="card-label">🇬🇧 англійська</div>
+          <div class="card-word">${p.en}</div>
+          ${p.ex ? `<div class="card-hint">"${p.ex}"</div>` : ''}
+          <div class="card-sub" style="margin-top:12px;font-size:11px;">${p.cat}</div>
+        </div>
+        <div class="card-face card-back">
+          <div class="card-label">🇺🇦 переклад</div>
+          <div class="card-meaning">${p.ua}</div>
+          ${p.ex ? `<div class="card-ukr">"${p.ex}"</div>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="nav-row" id="flash-btns" style="display:none;">
+      <button class="btn bad" onclick="flashMark(false)">✗ Не знав</button>
+      <button class="btn ok" onclick="flashMark(true)">✓ Знаю!</button>
+    </div>
+    <div class="nav-row">
+      <button class="btn" onclick="flashSkip()">Пропустити →</button>
+    </div>`;
+}
+
+function flipCard() {
+  flipped = !flipped;
+  document.getElementById('fc').classList.toggle('flipped', flipped);
+  document.getElementById('flash-btns').style.display = flipped ? 'flex' : 'none';
+}
+
+function flashMark(ok) {
+  if (ok) flashCorrect++; else { flashWrong++; flashWrongList.push(flashList[flashIdx]); }
+  flashIdx++;
+  renderFlash();
+}
+function flashSkip() { flashIdx++; renderFlash(); }
+
+function renderFlashFinish() {
+  const pct = Math.round(flashCorrect / (flashCorrect+flashWrong||1) * 100);
+  document.getElementById('main-area').innerHTML = `
+    <div class="finish-card">
+      <div style="font-size:14px;color:var(--color-text-secondary);">Результат — Флешкарти</div>
+      <div class="finish-score">${flashCorrect} / ${flashCorrect+flashWrong}</div>
+      <div style="font-size:14px;color:var(--color-text-secondary);margin-bottom:1rem;">${pct}% знав одразу${flashWrongList.length?`<br>Повторити: ${flashWrongList.length} слів`:''}</div>
+      <div class="nav-row">
+        ${flashWrongList.length ? `<button class="btn bad" onclick="flashRetry()">Повторити помилки (${flashWrongList.length})</button>` : ''}
+        <button class="btn primary" onclick="flashRestart()">Всі знову</button>
+      </div>
+    </div>`;
+}
+
+function flashRetry() { flashList = shuffle([...flashWrongList]); flashIdx=0; flashCorrect=0; flashWrong=0; flashWrongList=[]; renderFlash(); }
+function flashRestart() { flashList = shuffle([...ALL_PAIRS]); flashIdx=0; flashCorrect=0; flashWrong=0; flashWrongList=[]; renderFlash(); }
+
+// ---- QUIZ ----
+function renderQuiz() {
+  if (quizIdx >= quizList.length) { renderQuizFinish(); return; }
+  quizAnswered = false;
+  const p = quizList[quizIdx];
+  const total = quizList.length;
+
+  // Build wrong options from same category or random
+  const pool = ALL_PAIRS.filter(x => x.ua !== p.ua);
+  const wrongs = shuffle(pool).slice(0,3).map(x => x.ua);
+  const opts = shuffle([p.ua, ...wrongs]);
+
+  document.getElementById('main-area').innerHTML = `
+    <div class="prog-bg"><div class="prog-fg" style="width:${Math.round(quizIdx/total*100)}%"></div></div>
+    <div class="stats">
+      <div class="stat"><div class="num green">${quizCorrect}</div><div class="lbl">Правильно</div></div>
+      <div class="stat"><div class="num">${quizIdx+1} / ${total}</div><div class="lbl">Питання</div></div>
+      <div class="stat"><div class="num red">${quizWrong}</div><div class="lbl">Помилок</div></div>
+    </div>
+    <div class="q-card">
+      <div class="q-type">📂 ${p.cat}</div>
+      <div class="q-text">${p.en}</div>
+      <div class="opts">
+        ${opts.map(o => `<button class="opt" onclick="quizPick('${o.replace(/'/g,"\\'")}','${p.ua.replace(/'/g,"\\'")}')">${o}</button>`).join('')}
+      </div>
+      <div class="exp" id="qexp"></div>
+    </div>
+    <div class="next-nav" id="qnav">
+      <button class="btn primary" onclick="quizNext()">Далі →</button>
+    </div>`;
+}
+
+function quizPick(chosen, correct) {
+  if (quizAnswered) return;
+  quizAnswered = true;
+  const ok = chosen === correct;
+  if (ok) quizCorrect++; else { quizWrong++; quizWrongList.push(quizList[quizIdx]); }
+  document.querySelectorAll('.opt').forEach(b => {
+    b.disabled = true;
+    if (b.textContent === correct) b.classList.add('right');
+    if (b.textContent === chosen && !ok) b.classList.add('wrong');
+  });
+  const exp = document.getElementById('qexp');
+  exp.style.display = 'block';
+  exp.className = 'exp' + (ok ? '' : ' bad');
+  exp.innerHTML = ok ? '✓ Правильно!' : `✗ Правильно: <strong>${correct}</strong>`;
+  document.getElementById('qnav').style.display = 'flex';
+}
+
+function quizNext() { quizIdx++; renderQuiz(); }
+
+function renderQuizFinish() {
+  const pct = Math.round(quizCorrect/quizList.length*100);
+  const msg = pct>=80?'🎉 Відмінно!':pct>=60?'👍 Непогано!':'📚 Треба повторити.';
+  document.getElementById('main-area').innerHTML = `
+    <div class="finish-card">
+      <div style="font-size:14px;color:var(--color-text-secondary);">Результат — Тест</div>
+      <div class="finish-score">${quizCorrect} / ${quizList.length}</div>
+      <div style="font-size:14px;color:var(--color-text-secondary);margin-bottom:1rem;">${pct}% правильних. ${msg}</div>
+      <div class="nav-row">
+        ${quizWrongList.length?`<button class="btn bad" onclick="quizRetry()">Помилки (${quizWrongList.length})</button>`:''}
+        <button class="btn primary" onclick="quizRestart()">Ще раз</button>
+      </div>
+    </div>`;
+}
+function quizRetry() { quizList=shuffle([...quizWrongList]); quizIdx=0; quizCorrect=0; quizWrong=0; quizWrongList=[]; renderQuiz(); }
+function quizRestart() { quizList=shuffle([...ALL_PAIRS]); quizIdx=0; quizCorrect=0; quizWrong=0; quizWrongList=[]; renderQuiz(); }
+
+// ---- CHEATSHEET ----
+function renderSheet() {
+  const sections = Object.entries(CATS).map(([cat, pairs]) => `
+    <div class="sheet-section">
+      <div class="sheet-title" onclick="toggleSection(this)">
+        <span>${cat} (${pairs.length})</span><span>▼</span>
+      </div>
+      <div class="sheet-rows">
+        ${pairs.map(p => `<div class="sheet-row"><div class="sheet-en">${p.en}</div><div class="sheet-ua">${p.ua}</div></div>`).join('')}
+      </div>
+    </div>`).join('');
+  document.getElementById('main-area').innerHTML = `<div class="sheet">${sections}</div>`;
+}
+
+function toggleSection(el) {
+  el.nextElementSibling.classList.toggle('open');
+  el.querySelector('span:last-child').textContent =
+    el.nextElementSibling.classList.contains('open') ? '▲' : '▼';
+}
+
+// Init
+renderFlash();
+</script>
